@@ -29,6 +29,7 @@ namespace Laboratorio
 
                     if (action == "INSERT")
                     {
+                        bTree.Insert(person);
                     }
                     if (action == "DELETE")
                     {
@@ -180,6 +181,47 @@ public class BTree
             }
 
             InsertNonFull(x.Children[i], person);
+        }
+    }
+    public bool Update(string name, string dpi, string newDateBirth, string newAddress)
+    {
+        BTreeNode node = Search(root, dpi); // Buscamos por DPI ya que es nuestra clave principal
+        if (node != null)
+        {
+            for (int i = 0; i < node.Count; i++)
+            {
+                if (node.Persons[i].DPI == dpi && node.Persons[i].Name == name)
+                {
+                    node.Persons[i].DateBirth = newDateBirth;
+                    node.Persons[i].Address = newAddress;
+                    return true; // Actualización exitosa
+                }
+            }
+        }
+        return false; // No se encontró la persona con el nombre y DPI dados
+    }
+    public BTreeNode Search(BTreeNode node, string dpi)
+    {
+        int i = 0;
+        while (i < node.Count && string.Compare(dpi, node.Persons[i].DPI) > 0)
+        {
+            i++;
+        }
+
+        // Si encontramos el DPI en el nodo actual
+        if (i < node.Count && node.Persons[i].DPI == dpi)
+        {
+            return node;
+        }
+        // Si el nodo es una hoja, significa que el DPI no está en este árbol
+        else if (node.IsLeaf)
+        {
+            return null;
+        }
+        // Si el nodo no es una hoja, buscamos el DPI en el subárbol correspondiente
+        else
+        {
+            return Search(node.Children[i], dpi);
         }
     }
 }
