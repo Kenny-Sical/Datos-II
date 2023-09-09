@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace Laboratorio
 {
@@ -35,7 +36,6 @@ namespace Laboratorio
                     if (action == "PATCH")
                     {
                     }
-                    // Para PATCH y DELETE puedes añadir lógica adicional según sea necesario
                 }
             }
         }
@@ -80,6 +80,7 @@ public class BTreeNode
         Count = 0;
         IsLeaf = true;
     }
+
 }
 public class BTree
 {
@@ -88,6 +89,98 @@ public class BTree
     public BTree()
     {
         root = new BTreeNode();
+    }
+    public void Insert(Person person)
+    {
+        var r = root;
+        if (r.Count == 2 * r.Degree - 1)
+        {
+            var s = new BTreeNode();
+            root = s;
+            s.IsLeaf = false;
+            s.Count = 0;
+            s.Children[0] = r;
+            SplitChild(s, 0);
+            InsertNonFull(s, person);
+        }
+        else
+        {
+            InsertNonFull(r, person);
+        }
+    }
+
+    private void SplitChild(BTreeNode x, int i)
+    {
+        var z = new BTreeNode();
+        var y = x.Children[i];
+        z.IsLeaf = y.IsLeaf;
+        z.Count = y.Degree - 1;
+
+        for (int j = 0; j < y.Degree - 1; j++)
+        {
+            z.Persons[j] = y.Persons[j + y.Degree];
+            y.Persons[j + y.Degree] = null;
+        }
+
+        if (!y.IsLeaf)
+        {
+            for (int j = 0; j < y.Degree; j++)
+            {
+                z.Children[j] = y.Children[j + y.Degree];
+                y.Children[j + y.Degree] = null;
+            }
+        }
+        y.Count = y.Degree - 1;
+
+        for (int j = x.Count; j >= i + 1; j--)
+        {
+            x.Children[j + 1] = x.Children[j];
+        }
+        x.Children[i + 1] = z;
+
+        for (int j = x.Count - 1; j >= i; j--)
+        {
+            x.Persons[j + 1] = x.Persons[j];
+        }
+        x.Persons[i] = y.Persons[y.Degree - 1];
+        y.Persons[y.Degree - 1] = null;
+        x.Count++;
+    }
+
+    private void InsertNonFull(BTreeNode x, Person person)
+    {
+        int i = x.Count - 1;
+        if (x.IsLeaf)
+        {
+            while (i >= 0 && person.CompareTo(x.Persons[i]) < 0)
+            {
+                x.Persons[i + 1] = x.Persons[i];
+                i--;
+            }
+
+            x.Persons[i + 1] = person;
+            x.Count++;
+        }
+        else
+        {
+            while (i >= 0 && person.CompareTo(x.Persons[i]) < 0)
+            {
+                i--;
+            }
+
+            i++;
+
+            if (x.Children[i].Count == 2 * x.Degree - 1)
+            {
+                SplitChild(x, i);
+                if (person.CompareTo(x.Persons[i]) > 0)
+                {
+                    i++;
+                }
+            }
+
+            InsertNonFull(x.Children[i], person);
+        }
     }
 }
 #endregion
