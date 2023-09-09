@@ -33,12 +33,39 @@ namespace Laboratorio
                     }
                     if (action == "DELETE")
                     {
+                        bTree.Delete(person.DPI);
                     }
                     if (action == "PATCH")
                     {
                         bool updated = bTree.Update(person.Name, person.DPI, person.DateBirth, person.Address);
                     }
                 }
+            }
+            bool continuar = true;
+            while (continuar)
+            {
+                Console.WriteLine("Ingrese el nombre de la persona a buscar");
+                string nameToSearch = Console.ReadLine();
+                var foundPeople = bTree.SearchByName(nameToSearch);
+
+                if (foundPeople.Count > 0)
+                {
+                    foreach (var person in foundPeople)
+                    {
+                        Console.WriteLine($"Found Person: {person.Name}, DPI: {person.DPI}, Date of Birth: {person.DateBirth}, Address: {person.Address}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Name: {nameToSearch} not found in the tree.");
+                }
+                Console.WriteLine("Desea terminar si/no");
+                string opcion = Console.ReadLine();
+                if (opcion == "si")
+                {
+                    continuar = false;
+                }
+                Console.ReadLine();
             }
         }
     }
@@ -417,6 +444,33 @@ public class BTree
         }
 
         sibling.Count--;
+    }
+    public List<Person> SearchByName(string name)
+    {
+        var result = new List<Person>();
+        SearchByName(root, name, result);
+        return result;
+    }
+
+    private void SearchByName(BTreeNode node, string name, List<Person> result)
+    {
+        if (node == null) return;
+
+        for (int i = 0; i < node.Count; i++)
+        {
+            if (node.Persons[i].Name == name)
+            {
+                result.Add(node.Persons[i]);
+            }
+        }
+
+        if (!node.IsLeaf)
+        {
+            for (int i = 0; i <= node.Count; i++)
+            {
+                SearchByName(node.Children[i], name, result);
+            }
+        }
     }
 }
 #endregion
