@@ -35,3 +35,31 @@ public class CSVDatos
     public Person PersonData { get; set; }
 }
 #endregion
+
+#region Arbol
+public class BTreeNode
+{
+    public int Degree { get; } = 3;
+    public int Count { get; set; }
+    public Person[] Persons { get; set; }
+    public BTreeNode[] Children { get; set; }
+    public bool IsLeaf { get; set; }
+
+    public BTreeNode()
+    {
+        Persons = new Person[2 * Degree - 1];
+        Children = new BTreeNode[2 * Degree];
+        Count = 0;
+        IsLeaf = true;
+    }
+}
+public class BTree
+{
+    private BTreeNode root;
+    const int t = 3;
+    public BTree()
+    {
+        root = new BTreeNode();
+    }
+}
+#endregion
