@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,6 +11,33 @@ namespace Laboratorio
     {
         static void Main(string[] args)
         {
+            var path = @"C:\Users\sical\OneDrive\Escritorio\datos.txt";
+            var bTree = new BTree();
+
+            using (var reader = new StreamReader(path))
+            {
+                while (!reader.EndOfStream)
+                {
+                    var line = reader.ReadLine();
+                    var parts = line.Split(';');
+
+                    var action = parts[0];
+                    var jsonData = parts[1];
+
+                    var person = JsonConvert.DeserializeObject<Person>(jsonData);
+
+                    if (action == "INSERT")
+                    {
+                    }
+                    if (action == "DELETE")
+                    {
+                    }
+                    if (action == "PATCH")
+                    {
+                    }
+                    // Para PATCH y DELETE puedes añadir lógica adicional según sea necesario
+                }
+            }
         }
     }
 }
