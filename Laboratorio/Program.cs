@@ -36,6 +36,7 @@ namespace Laboratorio
                     }
                     if (action == "PATCH")
                     {
+                        bool updated = bTree.Update(person.Name, person.DPI, person.DateBirth, person.Address);
                     }
                 }
             }
@@ -223,6 +224,199 @@ public class BTree
         {
             return Search(node.Children[i], dpi);
         }
+    }
+    public void Delete(string dpi)
+    {
+        Delete(root, dpi);
+    }
+
+    private void Delete(BTreeNode node, string dpi)
+    {
+        int idx = 0;
+
+        while (idx < node.Count && dpi.CompareTo(node.Persons[idx].DPI) > 0)
+        {
+            idx++;
+        }
+
+        // Si el valor está en este nodo y es un nodo hoja, simplemente lo eliminamos.
+        if (node.IsLeaf && idx < node.Count && node.Persons[idx].DPI == dpi)
+        {
+            for (int i = idx + 1; i < node.Count; i++)
+            {
+                node.Persons[i - 1] = node.Persons[i];
+            }
+
+            node.Count--;
+            node.Persons[node.Count] = null;
+            return;
+        }
+        // Si el nodo es un nodo interno y contiene el DPI
+        if (!node.IsLeaf && idx < node.Count && node.Persons[idx].DPI == dpi)
+        {
+            var y = node.Children[idx];   // Hijo precedente
+            var z = node.Children[idx + 1]; // Hijo siguiente
+
+            // Caso a
+            if (y.Count >= t)
+            {
+                var pred = GetMax(y);
+                node.Persons[idx] = pred;
+                Delete(y, pred.DPI);
+                return;
+            }
+            // Caso b
+            if (z.Count >= t)
+            {
+                var succ = GetMin(z);
+                node.Persons[idx] = succ;
+                Delete(z, succ.DPI);
+                return;
+            }
+            // Caso c
+            Merge(node, idx);
+            Delete(y, dpi);
+        }
+        if (!node.IsLeaf)
+        {
+            var child = node.Children[idx];
+
+            // Caso 3a
+            if (child.Count == t - 1 && idx > 0 && node.Children[idx - 1].Count >= t)
+            {
+                RotateRight(node, idx);
+            }
+            // Caso 3b
+            else if (child.Count == t - 1 && idx < node.Count && node.Children[idx + 1].Count >= t)
+            {
+                RotateLeft(node, idx);
+            }
+            // Caso 3c
+            else if (child.Count == t - 1)
+            {
+                // Si no es el último hijo, fusionamos con el siguiente hijo
+                if (idx < node.Count)
+                {
+                    Merge(node, idx);
+                    child = node.Children[idx];
+                }
+                // Si es el último hijo, fusionamos con el hijo anterior
+                else
+                {
+                    Merge(node, idx - 1);
+                    child = node.Children[idx - 1];
+                }
+            }
+
+            // Llamada recursiva
+            Delete(child, dpi);
+        }
+    }
+    private Person GetMax(BTreeNode node)
+    {
+        while (!node.IsLeaf)
+        {
+            node = node.Children[node.Count];
+        }
+        return node.Persons[node.Count - 1];
+    }
+
+    private Person GetMin(BTreeNode node)
+    {
+        while (!node.IsLeaf)
+        {
+            node = node.Children[0];
+        }
+        return node.Persons[0];
+    }
+
+    private void Merge(BTreeNode node, int idx)
+    {
+        var child = node.Children[idx];
+        var sibling = node.Children[idx + 1];
+
+        child.Persons[t - 1] = node.Persons[idx];
+
+        for (int i = 0; i < sibling.Count; i++)
+        {
+            child.Persons[i + t] = sibling.Persons[i];
+        }
+
+        if (!child.IsLeaf)
+        {
+            for (int i = 0; i <= sibling.Count; i++)
+            {
+                child.Children[i + t] = sibling.Children[i];
+            }
+        }
+
+        for (int i = idx + 1; i < node.Count; i++)
+        {
+            node.Persons[i - 1] = node.Persons[i];
+        }
+
+        for (int i = idx + 2; i <= node.Count; i++)
+        {
+            node.Children[i - 1] = node.Children[i];
+        }
+
+        child.Count += sibling.Count + 1;
+        node.Count--;
+
+        // Liberar el nodo hermano
+        sibling = null;
+    }
+    private void RotateLeft(BTreeNode node, int idx)
+    {
+        var child = node.Children[idx];
+        var sibling = node.Children[idx + 1];
+
+        child.Persons[child.Count] = node.Persons[idx];
+        child.Count++;
+
+        node.Persons[idx] = sibling.Persons[0];
+
+        for (int i = 1; i < sibling.Count; i++)
+        {
+            sibling.Persons[i - 1] = sibling.Persons[i];
+        }
+
+        if (!sibling.IsLeaf)
+        {
+            child.Children[child.Count] = sibling.Children[0];
+            for (int i = 1; i <= sibling.Count; i++)
+            {
+                sibling.Children[i - 1] = sibling.Children[i];
+            }
+        }
+
+        sibling.Count--;
+    }
+
+    private void RotateRight(BTreeNode node, int idx)
+    {
+        var child = node.Children[idx];
+        var sibling = node.Children[idx - 1];
+
+        for (int i = child.Count; i > 0; i--)
+        {
+            child.Persons[i] = child.Persons[i - 1];
+        }
+        child.Count++;
+        child.Persons[0] = node.Persons[idx - 1];
+
+        node.Persons[idx - 1] = sibling.Persons[sibling.Count - 1];
+
+        if (!sibling.IsLeaf)
+        {
+            for (int i = child.Count; i > 0; i--)
+            {
+                child.Children[i] = child.Children[i - 1];
+            }
+            child.Children[0] = sibling.Children[sibling.Count];
+        }
+
+        sibling.Count--;
     }
 }
 #endregion
