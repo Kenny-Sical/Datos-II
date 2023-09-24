@@ -85,6 +85,50 @@ public class AVLProcessor
     {
         return avlTree.SearchByDPI(dpi);
     }
+    public List<Tuple<int, char>> Encode(string input)
+    {
+        List<Tuple<int, char>> encoded = new List<Tuple<int, char>>();
+        Dictionary<string, int> dictionary = new Dictionary<string, int>();
+        int dictSize = 1;
+
+        string currentString = string.Empty;
+        foreach (char c in input)
+        {
+            string combined = currentString + c;
+            if (!dictionary.ContainsKey(combined))
+            {
+                if (dictionary.ContainsKey(currentString))
+                {
+                    encoded.Add(new Tuple<int, char>(dictionary[currentString], c));
+                }
+                else
+                {
+                    encoded.Add(new Tuple<int, char>(0, c));
+                }
+
+                dictionary[combined] = dictSize++;
+                currentString = string.Empty;
+            }
+            else
+            {
+                currentString = combined;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(currentString))
+        {
+            if (dictionary.ContainsKey(currentString))
+            {
+                encoded.Add(new Tuple<int, char>(dictionary[currentString], ' '));
+            }
+            else
+            {
+                encoded.Add(new Tuple<int, char>(0, currentString[0]));
+            }
+        }
+
+        return encoded;
+    }
 }
 
 
