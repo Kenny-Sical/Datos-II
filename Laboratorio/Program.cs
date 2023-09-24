@@ -81,9 +81,9 @@ public class AVLProcessor
             }
         }
     }
-    public List<Person> SearchByName(string name)
+    public Person SearchByDPI(string dpi)
     {
-        return avlTree.SearchByName(name);
+        return avlTree.SearchByDPI(dpi);
     }
 }
 
@@ -337,26 +337,22 @@ public class AVLTree
         // 2. Insertar la persona actualizada
         Insert(updatedPerson);
     }
-    public List<Person> SearchByName(string name)
+    public Person SearchByDPI(string dpi)
     {
-        List<Person> results = new List<Person>();
-        SearchByNameRec(root, name, results);
-        return results;
+        return SearchByDPIRec(root, dpi);
     }
 
-    private void SearchByNameRec(Node node, string name, List<Person> results)
+    private Person SearchByDPIRec(Node node, string dpi)
     {
-        if (node == null) return;
+        if (node == null) return null;
 
-        // Buscar en el subárbol izquierdo
-        SearchByNameRec(node.Left, name, results);
+        if (node.Value.Dpi == dpi)
+            return node.Value;
 
-        // Verificar el nodo actual
-        if (node.Value.Name == name)
-            results.Add(node.Value);
+        if (string.Compare(dpi, node.Value.Dpi) < 0)
+            return SearchByDPIRec(node.Left, dpi);
 
-        // Buscar en el subárbol derecho
-        SearchByNameRec(node.Right, name, results);
+        return SearchByDPIRec(node.Right, dpi);
     }
 }
 #endregion
