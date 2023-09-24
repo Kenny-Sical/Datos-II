@@ -1,476 +1,344 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
-
-namespace Laboratorio
+class Program
 {
-    internal class Program
+    static void Main(string[] args)
     {
-        static void Main(string[] args)
+        // Crear una instancia del procesador AVL
+        var processor = new AVLProcessor();
+
+        // Procesar el archivo de bitácora
+        processor.ProcessFile(@"C:\Users\sical\OneDrive\Escritorio\datos.txt");
+
+        //Busqueda
+        bool salir = true;
+        while (true)
         {
-            var path = @"C:\Users\sical\OneDrive\Escritorio\datos.txt";
-            var bTree = new BTree();
-
-            using (var reader = new StreamReader(path))
+            Console.WriteLine("Introduce un nombre para buscar:");
+            string nameToSearch = Console.ReadLine();
+            var results = processor.SearchByName(nameToSearch);
+            if (results.Count == 0)
             {
-                while (!reader.EndOfStream)
+                Console.WriteLine($"No se encontraron registros para el nombre: {nameToSearch}");
+            }
+            else
+            {
+                foreach (var person in results)
                 {
-                    var line = reader.ReadLine();
-                    var parts = line.Split(';');
-
-                    var action = parts[0];
-                    var jsonData = parts[1];
-
-                    var person = JsonConvert.DeserializeObject<Person>(jsonData);
-
-                    if (action == "INSERT")
-                    {
-                        bTree.Insert(person);
-                    }
-                    if (action == "DELETE")
-                    {
-                        bTree.Delete(person.DPI);
-                    }
-                    if (action == "PATCH")
-                    {
-                        bool updated = bTree.Update(person.Name, person.DPI, person.DateBirth, person.Address);
-                    }
+                    Console.WriteLine($"Nombre: {person.Name}, DPI: {person.Dpi}, Fecha de Nacimiento: {person.DateBirth}, Dirección: {person.Address}");
                 }
             }
-            bool continuar = true;
-            while (continuar)
-            {
-                Console.WriteLine("Ingrese el nombre de la persona a buscar");
-                string nameToSearch = Console.ReadLine();
-                var foundPeople = bTree.SearchByName(nameToSearch);
 
-                if (foundPeople.Count > 0)
-                {
-                    foreach (var person in foundPeople)
-                    {
-                        Console.WriteLine($"Found Person: {person.Name}, DPI: {person.DPI}, Date of Birth: {person.DateBirth}, Address: {person.Address}");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"Name: {nameToSearch} not found in the tree.");
-                }
-                Console.WriteLine("Desea terminar si/no");
-                string opcion = Console.ReadLine();
-                if (opcion == "si")
-                {
-                    continuar = false;
-                }
-                Console.ReadLine();
+            Console.WriteLine("¿Decea salir?");
+            string decision = Console.ReadLine();
+            if (decision == "Si")
+            {
+                salir = false;
             }
+            else
+            {
+                Console.Clear();
+            }
+            Console.ReadKey();
         }
     }
 }
-
-
-#region Clases Persona
-public class Person
+public class AVLProcessor
 {
-    public string Name { get; set; }
-    public string DPI { get; set; }
-    public string DateBirth { get; set; }
-    public string Address { get; set; }
+    private AVLTree avlTree;
 
-    public int CompareTo(Person other)
+    public AVLProcessor()
     {
-        return DPI.CompareTo(other.DPI);
+        avlTree = new AVLTree();
     }
 
-}
-public class CSVDatos
-{
-    public string Instruction { get; set; }
-    public Person PersonData { get; set; }
-}
-#endregion
-
-#region Arbol
-public class BTreeNode
-{
-    public int Degree { get; } = 3;
-    public int Count { get; set; }
-    public Person[] Persons { get; set; }
-    public BTreeNode[] Children { get; set; }
-    public bool IsLeaf { get; set; }
-
-    public BTreeNode()
+    public void ProcessFile(string filePath)
     {
-        Persons = new Person[2 * Degree - 1];
-        Children = new BTreeNode[2 * Degree];
-        Count = 0;
-        IsLeaf = true;
-    }
-
-}
-public class BTree
-{
-    private BTreeNode root;
-    const int t = 3;
-    public BTree()
-    {
-        root = new BTreeNode();
-    }
-    public void Insert(Person person)
-    {
-        var r = root;
-        if (r.Count == 2 * r.Degree - 1)
+        string[] lines = File.ReadAllLines(filePath);
+        foreach (var line in lines)
         {
-            var s = new BTreeNode();
-            root = s;
-            s.IsLeaf = false;
-            s.Count = 0;
-            s.Children[0] = r;
-            SplitChild(s, 0);
-            InsertNonFull(s, person);
-        }
-        else
-        {
-            InsertNonFull(r, person);
-        }
-    }
+            string[] parts = line.Split(';');
+            if (parts.Length != 2) continue;  // Invalid line format
 
-    private void SplitChild(BTreeNode x, int i)
-    {
-        var z = new BTreeNode();
-        var y = x.Children[i];
-        z.IsLeaf = y.IsLeaf;
-        z.Count = y.Degree - 1;
+            string operation = parts[0];
+            Person person = JsonConvert.DeserializeObject<Person>(parts[1]);
 
-        for (int j = 0; j < y.Degree - 1; j++)
-        {
-            z.Persons[j] = y.Persons[j + y.Degree];
-            y.Persons[j + y.Degree] = null;
-        }
-
-        if (!y.IsLeaf)
-        {
-            for (int j = 0; j < y.Degree; j++)
+            switch (operation)
             {
-                z.Children[j] = y.Children[j + y.Degree];
-                y.Children[j + y.Degree] = null;
+                case "INSERT":
+                    avlTree.Insert(person);
+                    break;
+                case "PATCH":
+                    avlTree.Update(person.Name, person.Dpi, person);
+                    break;
+                case "DELETE":
+                    avlTree.Delete(person.Name, person.Dpi);
+                    break;
             }
         }
-        y.Count = y.Degree - 1;
-
-        for (int j = x.Count; j >= i + 1; j--)
-        {
-            x.Children[j + 1] = x.Children[j];
-        }
-        x.Children[i + 1] = z;
-
-        for (int j = x.Count - 1; j >= i; j--)
-        {
-            x.Persons[j + 1] = x.Persons[j];
-        }
-        x.Persons[i] = y.Persons[y.Degree - 1];
-        y.Persons[y.Degree - 1] = null;
-        x.Count++;
-    }
-
-    private void InsertNonFull(BTreeNode x, Person person)
-    {
-        int i = x.Count - 1;
-        if (x.IsLeaf)
-        {
-            while (i >= 0 && person.CompareTo(x.Persons[i]) < 0)
-            {
-                x.Persons[i + 1] = x.Persons[i];
-                i--;
-            }
-
-            x.Persons[i + 1] = person;
-            x.Count++;
-        }
-        else
-        {
-            while (i >= 0 && person.CompareTo(x.Persons[i]) < 0)
-            {
-                i--;
-            }
-
-            i++;
-
-            if (x.Children[i].Count == 2 * x.Degree - 1)
-            {
-                SplitChild(x, i);
-                if (person.CompareTo(x.Persons[i]) > 0)
-                {
-                    i++;
-                }
-            }
-
-            InsertNonFull(x.Children[i], person);
-        }
-    }
-    public bool Update(string name, string dpi, string newDateBirth, string newAddress)
-    {
-        BTreeNode node = Search(root, dpi); // Buscamos por DPI ya que es nuestra clave principal
-        if (node != null)
-        {
-            for (int i = 0; i < node.Count; i++)
-            {
-                if (node.Persons[i].DPI == dpi && node.Persons[i].Name == name)
-                {
-                    node.Persons[i].DateBirth = newDateBirth;
-                    node.Persons[i].Address = newAddress;
-                    return true; // Actualización exitosa
-                }
-            }
-        }
-        return false; // No se encontró la persona con el nombre y DPI dados
-    }
-    public BTreeNode Search(BTreeNode node, string dpi)
-    {
-        int i = 0;
-        while (i < node.Count && string.Compare(dpi, node.Persons[i].DPI) > 0)
-        {
-            i++;
-        }
-
-        // Si encontramos el DPI en el nodo actual
-        if (i < node.Count && node.Persons[i].DPI == dpi)
-        {
-            return node;
-        }
-        // Si el nodo es una hoja, significa que el DPI no está en este árbol
-        else if (node.IsLeaf)
-        {
-            return null;
-        }
-        // Si el nodo no es una hoja, buscamos el DPI en el subárbol correspondiente
-        else
-        {
-            return Search(node.Children[i], dpi);
-        }
-    }
-    public void Delete(string dpi)
-    {
-        Delete(root, dpi);
-    }
-
-    private void Delete(BTreeNode node, string dpi)
-    {
-        int idx = 0;
-
-        while (idx < node.Count && dpi.CompareTo(node.Persons[idx].DPI) > 0)
-        {
-            idx++;
-        }
-
-        // Si el valor está en este nodo y es un nodo hoja, simplemente lo eliminamos.
-        if (node.IsLeaf && idx < node.Count && node.Persons[idx].DPI == dpi)
-        {
-            for (int i = idx + 1; i < node.Count; i++)
-            {
-                node.Persons[i - 1] = node.Persons[i];
-            }
-
-            node.Count--;
-            node.Persons[node.Count] = null;
-            return;
-        }
-        // Si el nodo es un nodo interno y contiene el DPI
-        if (!node.IsLeaf && idx < node.Count && node.Persons[idx].DPI == dpi)
-        {
-            var y = node.Children[idx];   // Hijo precedente
-            var z = node.Children[idx + 1]; // Hijo siguiente
-
-            // Caso a
-            if (y.Count >= t)
-            {
-                var pred = GetMax(y);
-                node.Persons[idx] = pred;
-                Delete(y, pred.DPI);
-                return;
-            }
-            // Caso b
-            if (z.Count >= t)
-            {
-                var succ = GetMin(z);
-                node.Persons[idx] = succ;
-                Delete(z, succ.DPI);
-                return;
-            }
-            // Caso c
-            Merge(node, idx);
-            Delete(y, dpi);
-        }
-        if (!node.IsLeaf)
-        {
-            var child = node.Children[idx];
-
-            // Caso 3a
-            if (child.Count == t - 1 && idx > 0 && node.Children[idx - 1].Count >= t)
-            {
-                RotateRight(node, idx);
-            }
-            // Caso 3b
-            else if (child.Count == t - 1 && idx < node.Count && node.Children[idx + 1].Count >= t)
-            {
-                RotateLeft(node, idx);
-            }
-            // Caso 3c
-            else if (child.Count == t - 1)
-            {
-                // Si no es el último hijo, fusionamos con el siguiente hijo
-                if (idx < node.Count)
-                {
-                    Merge(node, idx);
-                    child = node.Children[idx];
-                }
-                // Si es el último hijo, fusionamos con el hijo anterior
-                else
-                {
-                    Merge(node, idx - 1);
-                    child = node.Children[idx - 1];
-                }
-            }
-
-            // Llamada recursiva
-            Delete(child, dpi);
-        }
-    }
-    private Person GetMax(BTreeNode node)
-    {
-        while (!node.IsLeaf)
-        {
-            node = node.Children[node.Count];
-        }
-        return node.Persons[node.Count - 1];
-    }
-
-    private Person GetMin(BTreeNode node)
-    {
-        while (!node.IsLeaf)
-        {
-            node = node.Children[0];
-        }
-        return node.Persons[0];
-    }
-
-    private void Merge(BTreeNode node, int idx)
-    {
-        var child = node.Children[idx];
-        var sibling = node.Children[idx + 1];
-
-        child.Persons[t - 1] = node.Persons[idx];
-
-        for (int i = 0; i < sibling.Count; i++)
-        {
-            child.Persons[i + t] = sibling.Persons[i];
-        }
-
-        if (!child.IsLeaf)
-        {
-            for (int i = 0; i <= sibling.Count; i++)
-            {
-                child.Children[i + t] = sibling.Children[i];
-            }
-        }
-
-        for (int i = idx + 1; i < node.Count; i++)
-        {
-            node.Persons[i - 1] = node.Persons[i];
-        }
-
-        for (int i = idx + 2; i <= node.Count; i++)
-        {
-            node.Children[i - 1] = node.Children[i];
-        }
-
-        child.Count += sibling.Count + 1;
-        node.Count--;
-
-        // Liberar el nodo hermano
-        sibling = null;
-    }
-    private void RotateLeft(BTreeNode node, int idx)
-    {
-        var child = node.Children[idx];
-        var sibling = node.Children[idx + 1];
-
-        child.Persons[child.Count] = node.Persons[idx];
-        child.Count++;
-
-        node.Persons[idx] = sibling.Persons[0];
-
-        for (int i = 1; i < sibling.Count; i++)
-        {
-            sibling.Persons[i - 1] = sibling.Persons[i];
-        }
-
-        if (!sibling.IsLeaf)
-        {
-            child.Children[child.Count] = sibling.Children[0];
-            for (int i = 1; i <= sibling.Count; i++)
-            {
-                sibling.Children[i - 1] = sibling.Children[i];
-            }
-        }
-
-        sibling.Count--;
-    }
-
-    private void RotateRight(BTreeNode node, int idx)
-    {
-        var child = node.Children[idx];
-        var sibling = node.Children[idx - 1];
-
-        for (int i = child.Count; i > 0; i--)
-        {
-            child.Persons[i] = child.Persons[i - 1];
-        }
-        child.Count++;
-        child.Persons[0] = node.Persons[idx - 1];
-
-        node.Persons[idx - 1] = sibling.Persons[sibling.Count - 1];
-
-        if (!sibling.IsLeaf)
-        {
-            for (int i = child.Count; i > 0; i--)
-            {
-                child.Children[i] = child.Children[i - 1];
-            }
-            child.Children[0] = sibling.Children[sibling.Count];
-        }
-
-        sibling.Count--;
     }
     public List<Person> SearchByName(string name)
     {
-        var result = new List<Person>();
-        SearchByName(root, name, result);
-        return result;
+        return avlTree.SearchByName(name);
+    }
+}
+
+
+#region PersonClass
+public class Person
+{
+    public string Name { get; set; }
+    public string Dpi { get; set; }
+    public string DateBirth { get; set; }
+    public string Address { get; set; }
+
+    // Constructor
+    public Person(string name, string dpi, string dateBirth, string address)
+    {
+        Name = name;
+        Dpi = dpi;
+        DateBirth = dateBirth;
+        Address = address;
+    }
+}
+#endregion
+#region Arból
+public class Node
+{
+    public Person Value { get; set; }
+    public Node Left { get; set; }
+    public Node Right { get; set; }
+    public int Height { get; set; }
+
+    // Constructor
+    public Node(Person value)
+    {
+        Value = value;
+        Left = null;
+        Right = null;
+        Height = 1;  // Al crear un nuevo nodo, su altura es 1
+    }
+}
+public class AVLTree
+{
+    private Node root;
+
+    public AVLTree()
+    {
+        root = null;
     }
 
-    private void SearchByName(BTreeNode node, string name, List<Person> result)
+    private int GetHeight(Node node)
+    {
+        if (node == null)
+            return 0;
+        return node.Height;
+    }
+
+    private int GetBalanceFactor(Node node)
+    {
+        if (node == null)
+            return 0;
+        return GetHeight(node.Left) - GetHeight(node.Right);
+    }
+    private Node RotateRight(Node y)
+    {
+        Node x = y.Left;
+        Node T3 = x.Right;
+
+        // Realizar rotación
+        x.Right = y;
+        y.Left = T3;
+
+        // Actualizar alturas
+        y.Height = Math.Max(GetHeight(y.Left), GetHeight(y.Right)) + 1;
+        x.Height = Math.Max(GetHeight(x.Left), GetHeight(x.Right)) + 1;
+
+        return x;  // nuevo nodo raíz
+    }
+
+    private Node RotateLeft(Node x)
+    {
+        Node y = x.Right;
+        Node T2 = y.Left;
+
+        // Realizar rotación
+        y.Left = x;
+        x.Right = T2;
+
+        // Actualizar alturas
+        x.Height = Math.Max(GetHeight(x.Left), GetHeight(x.Right)) + 1;
+        y.Height = Math.Max(GetHeight(y.Left), GetHeight(y.Right)) + 1;
+
+        return y;  // nuevo nodo raíz
+    }
+
+    private Node RotateLeftRight(Node node)
+    {
+        node.Left = RotateLeft(node.Left);
+        return RotateRight(node);
+    }
+
+    private Node RotateRightLeft(Node node)
+    {
+        node.Right = RotateRight(node.Right);
+        return RotateLeft(node);
+    }
+    public void Insert(Person person)
+    {
+        root = InsertRec(root, person);
+    }
+
+    private Node InsertRec(Node node, Person person)
+    {
+        // 1. Realizar inserción normal de BST
+        if (node == null)
+            return new Node(person);
+
+        // Ordenamos los nodos por el nombre
+        if (string.Compare(person.Name, node.Value.Name) < 0)
+            node.Left = InsertRec(node.Left, person);
+        else if (string.Compare(person.Name, node.Value.Name) > 0)
+            node.Right = InsertRec(node.Right, person);
+        else  // Los nombres duplicados no están permitidos en el BST
+            return node;
+
+        // 2. Actualizar altura del nodo actual
+        node.Height = 1 + Math.Max(GetHeight(node.Left), GetHeight(node.Right));
+
+        // 3. Obtener el factor de equilibrio para ver si se desequilibró
+        int balance = GetBalanceFactor(node);
+
+        // Si el nodo se desequilibra, hay 4 casos a considerar
+
+        // Caso LL
+        if (balance > 1 && string.Compare(person.Name, node.Left.Value.Name) < 0)
+            return RotateRight(node);
+
+        // Caso RR
+        if (balance < -1 && string.Compare(person.Name, node.Right.Value.Name) > 0)
+            return RotateLeft(node);
+
+        // Caso LR
+        if (balance > 1 && string.Compare(person.Name, node.Left.Value.Name) > 0)
+            return RotateLeftRight(node);
+
+        // Caso RL
+        if (balance < -1 && string.Compare(person.Name, node.Right.Value.Name) < 0)
+            return RotateRightLeft(node);
+
+        return node;  // retornar el nodo sin cambios
+    }
+    public void Delete(string name, string dpi)
+    {
+        root = DeleteRec(root, name, dpi);
+    }
+
+    private Node DeleteRec(Node root, string name, string dpi)
+    {
+        // 1. Realizar eliminación normal de BST
+        if (root == null) return root;
+
+        if (string.Compare(name, root.Value.Name) < 0)
+            root.Left = DeleteRec(root.Left, name, dpi);
+        else if (string.Compare(name, root.Value.Name) > 0)
+            root.Right = DeleteRec(root.Right, name, dpi);
+        else
+        {
+            // Si el nodo tiene un hijo o ninguno
+            if ((root.Left == null) || (root.Right == null))
+            {
+                Node temp = null;
+                if (temp == root.Left)
+                    temp = root.Right;
+                else
+                    temp = root.Left;
+
+                if (temp == null)
+                {
+                    temp = root;
+                    root = null;
+                }
+                else
+                    root = temp;
+            }
+            else
+            {
+                // Si el nodo tiene dos hijos
+                root.Value = FindMin(root.Right);
+                root.Right = DeleteRec(root.Right, root.Value.Name, root.Value.Dpi);
+            }
+        }
+
+        if (root == null) return root;
+
+        // 2. Actualizar altura del nodo actual
+        root.Height = 1 + Math.Max(GetHeight(root.Left), GetHeight(root.Right));
+
+        // 3. Obtener el factor de equilibrio para ver si se desequilibró
+        int balance = GetBalanceFactor(root);
+
+        // Si el nodo se desequilibra, hay 4 casos a considerar
+
+        // Caso LL
+        if (balance > 1 && GetBalanceFactor(root.Left) >= 0)
+            return RotateRight(root);
+
+        // Caso RR
+        if (balance < -1 && GetBalanceFactor(root.Right) <= 0)
+            return RotateLeft(root);
+
+        // Caso LR
+        if (balance > 1 && GetBalanceFactor(root.Left) < 0)
+            return RotateLeftRight(root);
+
+        // Caso RL
+        if (balance < -1 && GetBalanceFactor(root.Right) > 0)
+            return RotateRightLeft(root);
+
+        return root;
+    }
+
+    private Person FindMin(Node root)
+    {
+        Node current = root;
+        while (current.Left != null)
+            current = current.Left;
+
+        return current.Value;
+    }
+    public void Update(string name, string dpi, Person updatedPerson)
+    {
+        // 1. Eliminar la persona con el nombre y dpi dados
+        Delete(name, dpi);
+
+        // 2. Insertar la persona actualizada
+        Insert(updatedPerson);
+    }
+    public List<Person> SearchByName(string name)
+    {
+        List<Person> results = new List<Person>();
+        SearchByNameRec(root, name, results);
+        return results;
+    }
+
+    private void SearchByNameRec(Node node, string name, List<Person> results)
     {
         if (node == null) return;
 
-        for (int i = 0; i < node.Count; i++)
-        {
-            if (node.Persons[i].Name == name)
-            {
-                result.Add(node.Persons[i]);
-            }
-        }
+        // Buscar en el subárbol izquierdo
+        SearchByNameRec(node.Left, name, results);
 
-        if (!node.IsLeaf)
-        {
-            for (int i = 0; i <= node.Count; i++)
-            {
-                SearchByName(node.Children[i], name, result);
-            }
-        }
+        // Verificar el nodo actual
+        if (node.Value.Name == name)
+            results.Add(node.Value);
+
+        // Buscar en el subárbol derecho
+        SearchByNameRec(node.Right, name, results);
     }
 }
 #endregion
