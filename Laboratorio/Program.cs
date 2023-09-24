@@ -15,7 +15,7 @@ class Program
         var processor = new AVLProcessor();
 
         // Procesar el archivo de bitácora
-        processor.ProcessFile(@"C:\Users\sical\OneDrive\Escritorio\datos.txt");
+        processor.ProcessFile(@"C:\Users\sical\OneDrive\Escritorio\inputLab2.csv");
 
         //Busqueda
         bool salir = true;
