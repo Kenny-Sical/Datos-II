@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.IO;
+using System.Linq;
+
 class Program
 {
     static void Main(string[] args)
@@ -66,6 +68,17 @@ public class AVLProcessor
 
             string operation = parts[0];
             Person person = JsonConvert.DeserializeObject<Person>(parts[1]);
+
+            List<Tuple<int, char>> EncodedDpi;
+            List<List<Tuple<int, char>>> EncodedCompanies;
+
+            // Codify the DPI and convert it to a JSON string
+            EncodedDpi = Encode(person.Dpi);
+            person.Dpi = JsonConvert.SerializeObject(EncodedDpi);
+
+            // Codify each company, convert the encoded list to a JSON string, and replace the original list
+            EncodedCompanies = person.Companies.Select(company => Encode(company)).ToList();
+            person.Companies = EncodedCompanies.Select(encodedCompany => JsonConvert.SerializeObject(encodedCompany)).ToList();
 
             switch (operation)
             {
