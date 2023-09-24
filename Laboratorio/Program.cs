@@ -19,26 +19,90 @@ class Program
 
         //Busqueda
         bool salir = true;
-        while (true)
+        while (salir)
         {
-            Console.WriteLine("Introduce un nombre para buscar:");
-            string nameToSearch = Console.ReadLine();
-            var results = processor.SearchByName(nameToSearch);
-            if (results.Count == 0)
+            Console.WriteLine("Introduce un DPI para buscar:");
+            string dpiToSearch = Console.ReadLine();
+
+            // Codifica el DPI
+            var encodedDpiToSearchList = processor.Encode(dpiToSearch);
+            string encodedDpiToSearch = JsonConvert.SerializeObject(encodedDpiToSearchList);
+            var result = processor.SearchByDPI(encodedDpiToSearch);
+            //Mostrar Codificado o Sin codificar
+            Console.WriteLine("¿Mostrar Codificado Si/No?");
+            string mostrar = Console.ReadLine();
+            if (mostrar.ToUpper() == "NO")
             {
-                Console.WriteLine($"No se encontraron registros para el nombre: {nameToSearch}");
+
+
+                if (result != null)
+                {
+                    // Decodifica el DPI
+                    var decodedDpiList = JsonConvert.DeserializeObject<List<Tuple<int, char>>>(result.Dpi);
+                    string decodedDpi = Decode(decodedDpiList);
+
+                    // Decodifica las compañías
+                    var decodedCompaniesLists = result.Companies.Select(js => JsonConvert.DeserializeObject<List<Tuple<int, char>>>(js)).ToList();
+                    var decodedCompanies = decodedCompaniesLists.Select(decodedCompanyList => Decode(decodedCompanyList)).ToList();
+
+                    // Crea el objeto de salida
+                    var output = new OutputFormatDecode
+                    {
+                        Name = result.Name,
+                        Dpi = decodedDpi,
+                        DateBirth = result.DateBirth,
+                        Address = result.Address,
+                        Companies = decodedCompanies
+                    };
+
+                    // Convierte el objeto de salida a JSON y lo imprime
+                    string jsonString = JsonConvert.SerializeObject(output, Formatting.Indented);
+                    Console.WriteLine(jsonString);
+                }
+                else
+                {
+                    Console.WriteLine($"No se encontró un registro con el DPI: {dpiToSearch}");
+                }
             }
             else
             {
-                foreach (var person in results)
+                if (result != null)
                 {
-                    Console.WriteLine($"Nombre: {person.Name}, DPI: {person.Dpi}, Fecha de Nacimiento: {person.DateBirth}, Dirección: {person.Address}");
+                    if (result != null)
+                    {
+                        // Transforma la lista de tuplas del DPI a una lista de cadenas con el formato deseado
+                        var transformedDpiList = JsonConvert.DeserializeObject<List<Tuple<int, char>>>(result.Dpi).Select(tuple => $"({tuple.Item1},{tuple.Item2})").ToList();
+
+                        // Transforma cada compañía
+                        var transformedCompaniesList = result.Companies
+                            .Select(companyJson => {
+                                var tuples = JsonConvert.DeserializeObject<List<Tuple<int, char>>>(companyJson);
+                                return tuples.Select(tuple => $"({tuple.Item1},{tuple.Item2})").ToList();
+                            }).ToList();
+
+                        // Crea el objeto de salida con los datos originales
+                        var output = new OutputFormatEncode
+                        {
+                            Name = result.Name,
+                            Dpi = transformedDpiList,
+                            DateBirth = result.DateBirth,
+                            Address = result.Address,
+                            Companies = transformedCompaniesList
+                        };
+
+                        // Convierte el objeto de salida a JSON y lo imprime
+                        string jsonString = JsonConvert.SerializeObject(output, Formatting.Indented);
+                        Console.WriteLine(jsonString);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"No se encontró un registro con el DPI: {dpiToSearch}");
                 }
             }
-
             Console.WriteLine("¿Decea salir?");
             string decision = Console.ReadLine();
-            if (decision == "Si")
+            if (decision.ToUpper() == "SI")
             {
                 salir = false;
             }
