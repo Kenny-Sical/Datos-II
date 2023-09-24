@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 class Program
 {
@@ -47,6 +48,28 @@ class Program
             }
             Console.ReadKey();
         }
+        string Decode(List<Tuple<int, char>> encoded)
+        {
+            List<string> dictionary = new List<string> { "" };
+            StringBuilder decoded = new StringBuilder();
+
+            foreach (var tuple in encoded)
+            {
+                string entry;
+                if (tuple.Item1 == 0)
+                {
+                    entry = tuple.Item2.ToString();
+                }
+                else
+                {
+                    entry = dictionary[tuple.Item1] + tuple.Item2;
+                }
+                decoded.Append(entry);
+                dictionary.Add(entry);
+            }
+
+            return decoded.ToString();
+        }
     }
 }
 public class AVLProcessor
@@ -64,7 +87,7 @@ public class AVLProcessor
         foreach (var line in lines)
         {
             string[] parts = line.Split(';');
-            if (parts.Length != 2) continue;  // Invalid line format
+            if (parts.Length != 2) continue; 
 
             string operation = parts[0];
             Person person = JsonConvert.DeserializeObject<Person>(parts[1]);
