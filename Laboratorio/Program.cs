@@ -95,15 +95,33 @@ public class Person
     public string Dpi { get; set; }
     public string DateBirth { get; set; }
     public string Address { get; set; }
+    public List<string> Companies { get; set; }
 
     // Constructor
-    public Person(string name, string dpi, string dateBirth, string address)
+    public Person(string name, string dpi, string dateBirth, string address, List<string> companies)
     {
         Name = name;
         Dpi = dpi;
         DateBirth = dateBirth;
         Address = address;
+        Companies = companies;
     }
+}
+public class OutputFormatDecode
+{
+    public string Name { get; set; }
+    public string Dpi { get; set; }
+    public string DateBirth { get; set; }
+    public string Address { get; set; }
+    public List<string> Companies { get; set; }
+}
+public class OutputFormatEncode
+{
+    public string Name { get; set; }
+    public List<string> Dpi { get; set; }
+    public string DateBirth { get; set; }
+    public string Address { get; set; }
+    public List<List<string>> Companies { get; set; }
 }
 #endregion
 #region Arból
