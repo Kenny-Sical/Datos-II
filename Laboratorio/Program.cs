@@ -15,8 +15,8 @@ class Program
         var processor = new AVLProcessor();
 
         // Procesar el archivo de bitácora
-        processor.ProcessFile(@"C:\Users\sical\OneDrive\Escritorio\inputLab2.csv");
-
+        processor.ProcessFile(@"C:\Users\sical\OneDrive\Escritorio\inputs\input (2).csv");
+        MessageProcessor Cipher = new MessageProcessor("MILLAVE");
         //Busqueda
         bool salir = true;
         while (salir)
@@ -33,8 +33,6 @@ class Program
             string mostrar = Console.ReadLine();
             if (mostrar.ToUpper() == "NO")
             {
-
-
                 if (result != null)
                 {
                     // Decodifica el DPI
@@ -58,6 +56,7 @@ class Program
                     // Convierte el objeto de salida a JSON y lo imprime
                     string jsonString = JsonConvert.SerializeObject(output, Formatting.Indented);
                     Console.WriteLine(jsonString);
+                    Archivos(decodedDpi);
                 }
                 else
                 {
@@ -68,32 +67,36 @@ class Program
             {
                 if (result != null)
                 {
-                    if (result != null)
-                    {
-                        // Transforma la lista de tuplas del DPI a una lista de cadenas con el formato deseado
-                        var transformedDpiList = JsonConvert.DeserializeObject<List<Tuple<int, char>>>(result.Dpi).Select(tuple => $"({tuple.Item1},{tuple.Item2})").ToList();
+                    // Transforma la lista de tuplas del DPI a una lista de cadenas con el formato deseado
+                    var transformedDpiList = JsonConvert.DeserializeObject<List<Tuple<int, char>>>(result.Dpi).Select(tuple => $"({tuple.Item1},{tuple.Item2})").ToList();
 
-                        // Transforma cada compañía
-                        var transformedCompaniesList = result.Companies
-                            .Select(companyJson => {
-                                var tuples = JsonConvert.DeserializeObject<List<Tuple<int, char>>>(companyJson);
-                                return tuples.Select(tuple => $"({tuple.Item1},{tuple.Item2})").ToList();
-                            }).ToList();
-
-                        // Crea el objeto de salida con los datos originales
-                        var output = new OutputFormatEncode
+                    // Transforma cada compañía
+                    var transformedCompaniesList = result.Companies
+                        .Select(companyJson =>
                         {
-                            Name = result.Name,
-                            Dpi = transformedDpiList,
-                            DateBirth = result.DateBirth,
-                            Address = result.Address,
-                            Companies = transformedCompaniesList
-                        };
+                            var tuples = JsonConvert.DeserializeObject<List<Tuple<int, char>>>(companyJson);
+                            return tuples.Select(tuple => $"({tuple.Item1},{tuple.Item2})").ToList();
+                        }).ToList();
 
-                        // Convierte el objeto de salida a JSON y lo imprime
-                        string jsonString = JsonConvert.SerializeObject(output, Formatting.Indented);
-                        Console.WriteLine(jsonString);
-                    }
+                    // Crea el objeto de salida con los datos originales
+                    var output = new OutputFormatEncode
+                    {
+                        Name = result.Name,
+                        Dpi = transformedDpiList,
+                        DateBirth = result.DateBirth,
+                        Address = result.Address,
+                        Companies = transformedCompaniesList
+                    };
+
+                    // Convierte el objeto de salida a JSON y lo imprime
+                    string jsonString = JsonConvert.SerializeObject(output, Formatting.Indented);
+                    Console.WriteLine(jsonString);
+
+                    //Mandar a buscar las cartas recomendadas
+                    // Decodifica el DPI
+                    var decodedDpiList = JsonConvert.DeserializeObject<List<Tuple<int, char>>>(result.Dpi);
+                    string decodedDpi = Decode(decodedDpiList);
+                    Archivos(decodedDpi);
                 }
                 else
                 {
@@ -134,8 +137,33 @@ class Program
 
             return decoded.ToString();
         }
+        void Archivos(string dpi)
+        {
+            string inputDirectoryPath = @"C:\Users\sical\OneDrive\Escritorio\inputs\inputs";
+            string outputDirectoryPath = @"C:\Users\sical\OneDrive\Escritorio\inputs\inputs-Nuevos";
+            var matchingFiles = Directory.GetFiles(inputDirectoryPath, $"REC-{dpi}-*").ToList();
+
+            if (!matchingFiles.Any())
+            {
+                Console.WriteLine("No se encontraron archivos que coincidan con el DPI ingresado.");
+                return;
+            }
+
+            foreach (var filePath in matchingFiles)
+            {
+                string fileContent = File.ReadAllText(filePath);
+                string encrypted = Cipher.Encrypt(fileContent);
+                string decrypted = Cipher.Decrypt(encrypted);
+
+                File.WriteAllText(Path.Combine(outputDirectoryPath, Path.GetFileName(filePath) + ".encrypted"), encrypted);
+                File.WriteAllText(Path.Combine(outputDirectoryPath, Path.GetFileName(filePath) + ".decrypted"), decrypted);
+
+                Console.WriteLine($"Archivo {filePath} procesado y cifrado/descifrado correctamente.");
+            }
+        }
     }
 }
+#region AVLProcessor
 public class AVLProcessor
 {
     private AVLTree avlTree;
@@ -230,7 +258,7 @@ public class AVLProcessor
         return encoded;
     }
 }
-
+#endregion
 
 #region PersonClass
 public class Person
@@ -268,6 +296,7 @@ public class OutputFormatEncode
     public List<List<string>> Companies { get; set; }
 }
 #endregion
+
 #region Arból
 public class Node
 {
@@ -499,4 +528,86 @@ public class AVLTree
         return SearchByDPIRec(node.Right, dpi);
     }
 }
+#endregion
+
+#region Encriptar
+public class MessageProcessor
+{
+    private readonly string _key;
+    private readonly List<int> _keyOrder;
+
+    public MessageProcessor(string key)
+    {
+        _key = key;
+        _keyOrder = key.Select((c, i) => new { Character = c, Index = i })
+                       .OrderBy(x => x.Character)
+                       .Select(x => x.Index)
+                       .ToList();
+    }
+
+    public string Encrypt(string input)
+    {
+        int numRows = (int)Math.Ceiling((double)input.Length / _key.Length);
+        char[,] matrix = new char[numRows, _key.Length];
+
+        int index = 0;
+
+        // Llenar la matriz
+        for (int row = 0; row < numRows; row++)
+        {
+            for (int col = 0; col < _key.Length; col++)
+            {
+                if (index < input.Length)
+                {
+                    matrix[row, col] = input[index++];
+                }
+                else
+                {
+                    matrix[row, col] = '_';  // Relleno
+                }
+            }
+        }
+
+        // Leer la matriz según el orden de la clave
+        string encryptedText = "";
+        foreach (int columnIndex in _keyOrder)
+        {
+            for (int row = 0; row < numRows; row++)
+            {
+                encryptedText += matrix[row, columnIndex];
+            }
+        }
+
+        return encryptedText;
+    }
+
+    public string Decrypt(string input)
+    {
+        int numRows = input.Length / _key.Length;
+        char[,] matrix = new char[numRows, _key.Length];
+        int index = 0;
+
+        foreach (int columnIndex in _keyOrder)
+        {
+            for (int row = 0; row < numRows; row++)
+            {
+                matrix[row, columnIndex] = input[index++];
+            }
+        }
+
+        // Reconstruir el mensaje original
+        string decryptedText = "";
+        for (int row = 0; row < numRows; row++)
+        {
+            for (int col = 0; col < _key.Length; col++)
+            {
+                decryptedText += matrix[row, col];
+            }
+        }
+
+        return decryptedText.Replace("_", "");  // Eliminar caracteres de relleno
+    }
+}
+
+
 #endregion
